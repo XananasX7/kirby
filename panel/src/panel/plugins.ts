@@ -219,7 +219,6 @@ export default function Plugins(
 		// defaults
 		created: [],
 		icons: {},
-		login: undefined,
 		textareaButtons: {},
 		thirdParty: {},
 		writerMarks: {},
