@@ -11,7 +11,7 @@ import {
 
 window.panel = {
 	t: (value: string) => value
-};
+} as unknown as typeof window.panel;
 
 describe("$helper.link.detect()", () => {
 	it("should detect page UUID", () => {

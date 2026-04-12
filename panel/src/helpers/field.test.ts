@@ -1,5 +1,6 @@
 import type { ConcreteComponent } from "vue";
 import { describe, expect, it } from "vitest";
+import type Panel from "@/panel/panel";
 import { form } from "./field";
 
 describe("$helper.field.form()", () => {
@@ -20,7 +21,7 @@ describe("$helper.field.form()", () => {
 				return components[name];
 			}
 		}
-	};
+	} as unknown as Panel;
 
 	it("should create form object with default values for each field", () => {
 		const fields = {
