@@ -7,15 +7,28 @@ import {
 	Slice,
 	type MarkSpec,
 	type MarkType,
-	type Node
+	type Node,
+	type NodeSpec,
+	type NodeType
 } from "prosemirror-model";
 import { EditorState, type Plugin, type Transaction } from "prosemirror-state";
 import { vi } from "vitest";
 import type Editor from "@/components/Forms/Writer/Editor";
 
+const BASE_NODES = {
+	doc: { content: "block+" },
+	paragraph: {
+		content: "inline*",
+		group: "block",
+		parseDOM: [{ tag: "p" }],
+		toDOM: () => ["p", 0] as const
+	},
+	text: { group: "inline" }
+} satisfies Record<string, NodeSpec>;
+
 /**
- * Simulates typing `text` into a paragraph and returns the resulting HTML,
- * or null if the rule's regex did not match.
+ * Simulates typing `text` into a paragraph and returns the content of the
+ * resulting block as HTML, or null if the rule's regex did not match.
  *
  * The last character of `text` is treated as the trigger that fired the
  * rule. It is not present in the document when the handler runs, matching how
@@ -24,7 +37,8 @@ import type Editor from "@/components/Forms/Writer/Editor";
 export function applyInputRule(
 	schema: Schema,
 	rule: InputRule,
-	text: string
+	text: string,
+	suffix: string = ""
 ): string | null {
 	const docText = text.slice(0, -1);
 
@@ -39,10 +53,13 @@ export function applyInputRule(
 		return null;
 	}
 
-	const doc = schema.node("doc", null, [
-		schema.node("paragraph", null, [schema.text(docText)])
-	]);
-
+	const combined = docText + suffix;
+	const paragraph = schema.node(
+		"paragraph",
+		null,
+		combined ? [schema.text(combined)] : []
+	);
+	const doc = schema.node("doc", null, [paragraph]);
 	const state = EditorState.create({ doc });
 
 	const matchArray = Object.assign(Array.from(match), {
@@ -51,12 +68,7 @@ export function applyInputRule(
 	}) as RegExpMatchArray;
 
 	const tr = handler(state, matchArray, 1, 1 + docText.length);
-
-	if (!tr) {
-		return null;
-	}
-
-	return toHTML(schema, tr.doc);
+	return tr ? toHTML(schema, tr.doc) : null;
 }
 
 /**
@@ -82,19 +94,11 @@ export function applyPasteRule(
 }
 
 export function createSchemaWithMarks(marks: Record<string, MarkSpec>): Schema {
-	return new Schema({
-		nodes: {
-			doc: { content: "block+" },
-			paragraph: {
-				content: "inline*",
-				group: "block",
-				parseDOM: [{ tag: "p" }],
-				toDOM: () => ["p", 0] as const
-			},
-			text: { group: "inline" }
-		},
-		marks
-	});
+	return new Schema({ nodes: BASE_NODES, marks });
+}
+
+export function createSchemaWithNodes(nodes: Record<string, NodeSpec>): Schema {
+	return new Schema({ nodes: { ...BASE_NODES, ...nodes } });
 }
 
 export function getMarkAttrs(
@@ -104,6 +108,25 @@ export function getMarkAttrs(
 ): Record<string, unknown> | undefined {
 	const node = parseHTML(schema, html);
 	return node.firstChild!.firstChild!.marks.find((m) => m.type === mark)?.attrs;
+}
+
+export function getNodeAttrs(
+	schema: Schema,
+	html: string,
+	type: NodeType
+): Record<string, unknown> | undefined {
+	const div = document.createElement("div");
+	div.innerHTML = html;
+	const doc = DOMParser.fromSchema(schema).parse(div);
+	const node = doc.firstChild;
+	return node?.type === type ? node.attrs : undefined;
+}
+
+export function hasNode(schema: Schema, html: string, type: NodeType): boolean {
+	const div = document.createElement("div");
+	div.innerHTML = html;
+	const doc = DOMParser.fromSchema(schema).parse(div);
+	return doc.firstChild?.type === type;
 }
 
 export function hasMark(schema: Schema, html: string, mark: MarkType): boolean {
