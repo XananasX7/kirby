@@ -3,6 +3,11 @@ import type { Plugin, PluginSpec } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import Mark, { type MarkContext } from "../Mark";
 
+interface EmailAttrs {
+	href: string;
+	title?: string;
+}
+
 export default class Email extends Mark {
 	get button() {
 		return {
@@ -24,7 +29,7 @@ export default class Email extends Mark {
 				const { selection } = this.editor.state!;
 
 				// if no text is selected, we insert the link as text
-				if (selection.empty) {
+				if (selection.empty && attrs.href) {
 					this.editor.insertText(attrs.href, true);
 				}
 
@@ -62,8 +67,7 @@ export default class Email extends Mark {
 			{
 				props: {
 					handleClick: (_view: EditorView, _pos: number, event: MouseEvent) => {
-						// @ts-expect-error fixed once Editor.js is migrated to TS
-						const attrs = this.editor.getMarkAttrs("email");
+						const attrs = this.editor.getMarkAttrs<EmailAttrs>("email")!;
 
 						if (
 							attrs.href &&
@@ -83,10 +87,10 @@ export default class Email extends Mark {
 		return {
 			attrs: {
 				href: {
-					default: null
+					default: ""
 				},
 				title: {
-					default: null
+					default: undefined
 				}
 			},
 			inclusive: false,
