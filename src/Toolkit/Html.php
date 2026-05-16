@@ -380,7 +380,7 @@ class Html extends Xml
 	}
 
 	/**
-	 * Add noreferrer to rels when target is `_blank`
+	 * Adds noreferrer to rels when target is `_blank`
 	 *
 	 * @param string|null $rel Current `rel` value
 	 * @param string|null $target Current `target` value
@@ -392,15 +392,18 @@ class Html extends Xml
 	): string|null {
 		$rel = trim($rel ?? '');
 
-		if ($target === '_blank') {
-			if (empty($rel) === false) {
-				return $rel;
-			}
-
-			return trim($rel . ' noreferrer', ' ');
+		if ($target !== '_blank') {
+			return $rel ?: null;
 		}
 
-		return $rel ?: null;
+		// don't duplicate noreferrer if it's already in the rel list
+		$tokens = preg_split('/\s+/', $rel, -1, PREG_SPLIT_NO_EMPTY);
+
+		if (in_array('noreferrer', $tokens, true) === true) {
+			return $rel;
+		}
+
+		return trim($rel . ' noreferrer');
 	}
 
 	/**

@@ -78,7 +78,7 @@ class HtmlTest extends TestCase
 	public function testAWithTargetAndRel(): void
 	{
 		$html = Html::a('https://getkirby.com', 'Kirby', ['target' => '_blank', 'rel' => 'noopener']);
-		$expected = '<a href="https://getkirby.com" rel="noopener" target="_blank">Kirby</a>';
+		$expected = '<a href="https://getkirby.com" rel="noopener noreferrer" target="_blank">Kirby</a>';
 		$this->assertSame($expected, $html);
 	}
 
@@ -288,17 +288,23 @@ class HtmlTest extends TestCase
 
 	public function testRel(): void
 	{
-		$html = Html::rel('me');
-		$expected = 'me';
-		$this->assertSame($expected, $html);
+		// non-_blank target: rel passes through untouched
+		$this->assertSame('me', Html::rel('me'));
+		$this->assertNull(Html::rel(null));
+		$this->assertNull(Html::rel(''));
 
-		$html = Html::rel(null, '_blank');
-		$expected = 'noreferrer';
-		$this->assertSame($expected, $html);
+		// _blank target without existing rel: adds noreferrer
+		$this->assertSame('noreferrer', Html::rel(null, '_blank'));
+		$this->assertSame('noreferrer', Html::rel('', '_blank'));
 
-		$html = Html::rel('noopener', '_blank');
-		$expected = 'noopener';
-		$this->assertSame($expected, $html);
+		// _blank target with existing rel: appends noreferrer
+		$this->assertSame('noopener noreferrer', Html::rel('noopener', '_blank'));
+		$this->assertSame('nofollow noreferrer', Html::rel('nofollow', '_blank'));
+
+		// _blank target where noreferrer is already present: no duplicate
+		$this->assertSame('noreferrer', Html::rel('noreferrer', '_blank'));
+		$this->assertSame('noopener noreferrer', Html::rel('noopener noreferrer', '_blank'));
+		$this->assertSame('noreferrer noopener', Html::rel('noreferrer noopener', '_blank'));
 	}
 
 	public function testTel(): void
